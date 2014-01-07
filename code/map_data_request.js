@@ -16,8 +16,9 @@ window.MapDataRequest = function() {
 
 
   // no more than this many requests in parallel. stock site seems to rely on browser limits (6, usually), sending
-  // all requests at once. using our own queue limit ensures that other requests (e.g. chat) don't get postponed for too long
-  this.MAX_REQUESTS = 6;
+  // many requests at once.
+  // using our own queue limit ensures that other requests (e.g. chat, portal details) don't get delayed
+  this.MAX_REQUESTS = 5;
 
   // no more than this many tiles in one request
   // as of 2013-11-11, or possibly the release before that, the stock site was changed to only request four tiles at a time
@@ -28,7 +29,7 @@ window.MapDataRequest = function() {
   this.MIN_TILES_PER_REQUEST = 4;
 
   // number of times to retry a tile after a 'bad' error (i.e. not a timeout)
-  this.MAX_TILE_RETRIES = 1;
+  this.MAX_TILE_RETRIES = 2;
 
   // refresh timers
   this.MOVE_REFRESH = 1; //time, after a map move (pan/zoom) before starting the refresh processing
@@ -58,7 +59,7 @@ window.MapDataRequest = function() {
   this.FETCH_TO_REFRESH_FACTOR = 2;  //refresh time is based on the time to complete a data fetch, times this value
 
   // ensure we have some initial map status
-  this.setStatus ('startup');
+  this.setStatus ('startup', undefined, -1);
 }
 
 
@@ -75,7 +76,7 @@ window.MapDataRequest.prototype.start = function() {
 
   // then set a timeout to start the first refresh
   this.refreshOnTimeout (this.STARTUP_REFRESH);
-  this.setStatus ('refreshing');
+  this.setStatus ('refreshing', undefined, -1);
 
   this.cache && this.cache.startExpireInterval (15);
 }
@@ -109,7 +110,7 @@ window.MapDataRequest.prototype.mapMoveEnd = function() {
     }
   }
 
-  this.setStatus('refreshing');
+  this.setStatus('refreshing', undefined, -1);
   this.refreshOnTimeout(this.MOVE_REFRESH);
 }
 
@@ -119,7 +120,7 @@ window.MapDataRequest.prototype.idleResume = function() {
   if (this.idle) {
     console.log('refresh map idle resume');
     this.idle = false;
-    this.setStatus('idle restart');
+    this.setStatus('idle restart', undefined, -1);
     this.refreshOnTimeout(this.IDLE_RESUME_REFRESH);
   }
 }
@@ -261,7 +262,7 @@ window.MapDataRequest.prototype.refresh = function() {
     }
   }
 
-  this.setStatus ('loading');
+  this.setStatus ('loading', undefined, -1);
 
   // technically a request hasn't actually finished - however, displayed portal data has been refreshed
   // so as far as plugins are concerned, it should be treated as a finished request

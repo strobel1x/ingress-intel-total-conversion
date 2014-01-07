@@ -122,7 +122,9 @@ window.convertCookieToLocalStorage = function(name) {
 // add thousand separators to given number.
 // http://stackoverflow.com/a/1990590/1684530 by Doug Neiner.
 window.digits = function(d) {
-  return (d+"").replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1 ");
+  // U+2009 - Thin Space. Recommended for use as a thousands separator...
+  // https://en.wikipedia.org/wiki/Space_(punctuation)#Table_of_spaces
+  return (d+"").replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1&#8201;");
 }
 
 
@@ -280,7 +282,7 @@ window.getMinPortalLevelForZoom = function(z) {
 
   // these values are from the stock intel map. however, they're too detailed for reasonable speed, and increasing
   // detail at a higher zoom level shows enough detail still, AND speeds up IITC considerably
-//var ZOOM_TO_LEVEL = [8, 8, 8, 8, 7, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1];
+//var ZOOM_TO_LEVEL = [8, 8, 8, 8, 7, 7, 7, 6, 6, 5, 4, 4, 3, 2, 2, 1, 1];
   var ZOOM_TO_LEVEL = [8, 8, 8, 8, 8, 7, 7, 7, 6, 5, 4, 4, 3, 2, 2, 1, 1];
 
   var l = ZOOM_TO_LEVEL[z] || 0;
