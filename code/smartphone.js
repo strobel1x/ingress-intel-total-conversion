@@ -144,9 +144,6 @@ window.runOnSmartphonesAfterBoot = function() {
     $("body").on("click", "select", function() {
       android.spinnerEnabled(true);
     });
-    $("body").on("focus", "select", function() {
-      android.spinnerEnabled(false);
-    });
   }
 
   // add event to portals that allows long press to switch to sidebar
@@ -174,5 +171,20 @@ window.runOnSmartphonesAfterBoot = function() {
 window.useAndroidPanes = function() {
   // isSmartphone is important to disable panes in desktop mode
   return (typeof android !== 'undefined' && android && android.addPane && window.isSmartphone());
+}
+
+if(typeof android !== 'undefined' && android && android.getFileRequestUrlPrefix) {
+  window.requestFile = function(callback) {
+    do {
+      var funcName = "onFileSelected" + parseInt(Math.random()*0xFFFF).toString(16);
+    } while(window[funcName] !== undefined)
+
+    window[funcName] = function(filename, content) {
+      callback(decodeURIComponent(filename), atob(content));
+    };
+    var script = document.createElement('script');
+    script.src = android.getFileRequestUrlPrefix() + funcName;
+    (document.body || document.head || document.documentElement).appendChild(script);
+  };
 }
 
