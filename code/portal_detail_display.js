@@ -41,7 +41,7 @@ window.renderPortalDetails = function(guid) {
  
 
   var img = fixPortalImageUrl(details ? details.imageByUrl && details.imageByUrl.imageUrl : data.image);
-  var title = details ? details.portalV2.descriptiveText.TITLE : data.title;
+  var title = data.title;
 
   var lat = data.latE6/1E6;
   var lng = data.lngE6/1E6;
@@ -75,17 +75,16 @@ window.renderPortalDetails = function(guid) {
     if(portalDetailObj.description) {
       portalDetailedDescription += '<tr class="padding-top"><th>Description:</th><td>' + escapeHtmlSpecialChars(portalDetailObj.description) + '</td></tr>';
     }
-//    if(d.portalV2.descriptiveText.ADDRESS) {
-//      portalDetailedDescription += '<tr><th>Address:</th><td>' + escapeHtmlSpecialChars(d.portalV2.descriptiveText.ADDRESS) + '</td></tr>';
+//    if(d.descriptiveText.map.ADDRESS) {
+//      portalDetailedDescription += '<tr><th>Address:</th><td>' + escapeHtmlSpecialChars(d.descriptiveText.map.ADDRESS) + '</td></tr>';
 //    }
 
     portalDetailedDescription += '</table>';
   }
 
   // portal level. start with basic data - then extend with fractional info in tooltip if available
-//FIXME: use details or data if possible, to avoid ambiguity
-  var levelInt = portal.options.level;
-  var levelDetails = portal.options.level;
+  var levelInt = (teamStringToId(data.team) == TEAM_NONE) ? 0 : data.level;
+  var levelDetails = levelInt;
   if (details) {
     levelDetails = getPortalLevel(details);
     if(levelDetails != 8) {
@@ -126,7 +125,7 @@ window.renderPortalDetails = function(guid) {
 
   $('#portaldetails')
     .html('') //to ensure it's clear
-    .attr('class', TEAM_TO_CSS[portal.options.team]) //FIXME: use details/data if possible, to avoid ambiguity
+    .attr('class', TEAM_TO_CSS[teamStringToId(data.team)])
     .append(
       $('<h3>').attr({class:'title'}).text(data.title),
 
@@ -203,21 +202,27 @@ window.getPortalMiscDetails = function(guid,d) {
 
     // artifact details
 
-    //niantic hard-code the fact it's just jarvis shards/targets - so until more examples exist, we'll do the same
-    //(at some future point we can iterate through all the artifact types and add rows as needed)
-    var jarvisArtifact = artifact.getPortalData (guid, 'jarvis');
-    if (jarvisArtifact) {
-      // the genFourColumnTable function below doesn't handle cases where one column is null and the other isn't - so default to *something* in both columns
-      var target = ['',''], shards = ['shards','(none)'];
-      if (jarvisArtifact.target) {
-        target = ['target', '<span class="'+TEAM_TO_CSS[jarvisArtifact.target]+'">'+(jarvisArtifact.target==TEAM_RES?'Resistance':'Enlightened')+'</span>'];
-      }
-      if (jarvisArtifact.fragments) {
-        shards = [jarvisArtifact.fragments.length>1?'shards':'shard', '#'+jarvisArtifact.fragments.join(', #')];
-      }
+    // 2014-02-06: stock site changed from supporting 'jarvis shards' to 'amar artifacts'(?) - so let's see what we can do to be generic...
+    var artifactTypes = {
+      'jarvis': { 'name': 'Jarvis', 'fragmentName': 'shard(s)' },
+      'amar': { 'name': 'Amar', 'fragmentName': 'artifact(s)' },
+    };
 
-      randDetailsData.push (target, shards);
-    }
+    $.each(artifactTypes,function(type,details) {
+      var artdata = artifact.getPortalData (guid, type);
+      if (artdata) {
+        // the genFourColumnTable function below doesn't handle cases where one column is null and the other isn't - so default to *something* in both columns
+        var target = ['',''], shards = [details.fragmentName,'(none)'];
+        if (artdata.target) {
+          target = ['target', '<span class="'+TEAM_TO_CSS[artdata.target]+'">'+(artdata.target==TEAM_RES?'Resistance':'Enlightened')+'</span>'];
+        }
+        if (artdata.fragments) {
+          shards = [details.fragmentName, '#'+artdata.fragments.join(', #')];
+        }
+
+        randDetailsData.push (target, shards);
+      }
+    });
 
     randDetails = '<table id="randdetails">' + genFourColumnTable(randDetailsData) + '</table>';
 

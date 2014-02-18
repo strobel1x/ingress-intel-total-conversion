@@ -6,25 +6,31 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.os.Environment;
 import android.webkit.JavascriptInterface;
 import android.widget.Toast;
 
 import com.cradle.iitc_mobile.IITC_NavigationHelper.Pane;
 import com.cradle.iitc_mobile.share.ShareActivity;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
 // provide communication between IITC script and android app
 public class IITC_JSInterface {
     // context of main activity
-    private final IITC_Mobile mIitc;
+    protected final IITC_Mobile mIitc;
 
-    IITC_JSInterface(IITC_Mobile iitc) {
+    IITC_JSInterface(final IITC_Mobile iitc) {
         mIitc = iitc;
     }
 
     // open dialog to send geo intent for navigation apps like gmaps or waze etc...
     @JavascriptInterface
-    public void intentPosLink(double lat, double lng, int zoom, String title, boolean isPortal) {
-        Intent intent = new Intent(mIitc, ShareActivity.class);
+    public void intentPosLink(
+            final double lat, final double lng, final int zoom, final String title, final boolean isPortal) {
+        final Intent intent = new Intent(mIitc, ShareActivity.class);
         intent.putExtra("lat", lat);
         intent.putExtra("lng", lng);
         intent.putExtra("zoom", zoom);
@@ -35,8 +41,8 @@ public class IITC_JSInterface {
 
     // share a string to the IITC share activity. only uses the share tab.
     @JavascriptInterface
-    public void shareString(String str) {
-        Intent intent = new Intent(mIitc, ShareActivity.class);
+    public void shareString(final String str) {
+        final Intent intent = new Intent(mIitc, ShareActivity.class);
         intent.putExtra("shareString", str);
         intent.putExtra("onlyShare", true);
         mIitc.startActivity(intent);
@@ -45,16 +51,15 @@ public class IITC_JSInterface {
     // disable javascript injection while spinner is enabled
     // prevent the spinner from closing automatically
     @JavascriptInterface
-    public void spinnerEnabled(boolean en) {
+    public void spinnerEnabled(final boolean en) {
         mIitc.getWebView().disableJS(en);
     }
 
     // copy link to specific portal to android clipboard
     @JavascriptInterface
-    public void copy(String s) {
-        ClipboardManager clipboard = (ClipboardManager) mIitc
-                .getSystemService(Context.CLIPBOARD_SERVICE);
-        ClipData clip = ClipData.newPlainText("Copied Text ", s);
+    public void copy(final String s) {
+        final ClipboardManager clipboard = (ClipboardManager) mIitc.getSystemService(Context.CLIPBOARD_SERVICE);
+        final ClipData clip = ClipData.newPlainText("Copied Text ", s);
         clipboard.setPrimaryClip(clip);
         Toast.makeText(mIitc, "copied to clipboard", Toast.LENGTH_SHORT).show();
     }
@@ -63,10 +68,9 @@ public class IITC_JSInterface {
     public int getVersionCode() {
         int versionCode = 0;
         try {
-            PackageInfo pInfo = mIitc.getPackageManager()
-                    .getPackageInfo(mIitc.getPackageName(), 0);
+            final PackageInfo pInfo = mIitc.getPackageManager().getPackageInfo(mIitc.getPackageName(), 0);
             versionCode = pInfo.versionCode;
-        } catch (PackageManager.NameNotFoundException e) {
+        } catch (final PackageManager.NameNotFoundException e) {
             Log.w(e);
         }
         return versionCode;
@@ -75,11 +79,11 @@ public class IITC_JSInterface {
     @JavascriptInterface
     public String getVersionName() {
         String buildVersion = "unknown";
-        PackageManager pm = mIitc.getPackageManager();
+        final PackageManager pm = mIitc.getPackageManager();
         try {
-            PackageInfo info = pm.getPackageInfo(mIitc.getPackageName(), 0);
+            final PackageInfo info = pm.getPackageInfo(mIitc.getPackageName(), 0);
             buildVersion = info.versionName;
-        } catch (PackageManager.NameNotFoundException e) {
+        } catch (final PackageManager.NameNotFoundException e) {
             Log.w(e);
         }
         return buildVersion;
@@ -93,7 +97,7 @@ public class IITC_JSInterface {
                 Pane pane;
                 try {
                     pane = mIitc.getNavigationHelper().getPane(id);
-                } catch (IllegalArgumentException e) {
+                } catch (final IllegalArgumentException e) {
                     pane = Pane.MAP;
                 }
 
@@ -103,12 +107,12 @@ public class IITC_JSInterface {
     }
 
     @JavascriptInterface
-    public void dialogFocused(String id) {
+    public void dialogFocused(final String id) {
         mIitc.setFocusedDialog(id);
     }
 
     @JavascriptInterface
-    public void dialogOpened(String id, boolean open) {
+    public void dialogOpened(final String id, final boolean open) {
         mIitc.dialogOpened(id, open);
     }
 
@@ -190,9 +194,9 @@ public class IITC_JSInterface {
 
     @JavascriptInterface
     public boolean showZoom() {
-        PackageManager pm = mIitc.getPackageManager();
-        boolean hasMultitouch = pm.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN_MULTITOUCH);
-        boolean forcedZoom = mIitc.getPrefs().getBoolean("pref_user_zoom", false);
+        final PackageManager pm = mIitc.getPackageManager();
+        final boolean hasMultitouch = pm.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN_MULTITOUCH);
+        final boolean forcedZoom = mIitc.getPrefs().getBoolean("pref_user_zoom", false);
         return forcedZoom || !hasMultitouch;
     }
 
@@ -227,5 +231,26 @@ public class IITC_JSInterface {
     @JavascriptInterface
     public String getFileRequestUrlPrefix() {
         return mIitc.getFileManager().getFileRequestPrefix();
+    }
+
+    @JavascriptInterface
+    public void setPermalink(final String href) {
+        mIitc.setPermalink(href);
+    }
+
+    @JavascriptInterface
+    public void saveFile(final String filename, final String type, final String content) {
+        try {
+            final File outFile = new File(Environment.getExternalStorageDirectory().getPath() +
+                    "/IITC_Mobile/export/" + filename);
+            outFile.getParentFile().mkdirs();
+
+            final FileOutputStream outStream = new FileOutputStream(outFile);
+            outStream.write(content.getBytes("UTF-8"));
+            outStream.close();
+            Toast.makeText(mIitc, "File exported to " + outFile.getPath(), Toast.LENGTH_SHORT).show();
+        } catch (final IOException e) {
+            e.printStackTrace();
+        }
     }
 }
